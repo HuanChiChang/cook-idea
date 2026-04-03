@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>今天煮什麼？</title>
+  <style>
+    :root {
+      --orange: #e8873a;
+      --orange-light: #f5a462;
+      --orange-bg: #fff8f2;
+      --green: #5a8a5e;
+      --green-light: #7ab87f;
+      --cream: #fdf6ed;
+      --text: #3d2b1f;
+      --text-muted: #7a5c4a;
+      --border: #e8d5c4;
+      --shadow: 0 2px 16px rgba(100,60,20,0.10);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'PingFang TC', 'Microsoft JhengHei', '微軟正黑體', Arial, sans-serif;
+      background: var(--cream);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, var(--orange) 0%, #d4652a 100%);
+      color: #fff;
+      padding: 28px 20px 22px;
+      text-align: center;
+    }
+    header h1 { font-size: 2rem; font-weight: 900; letter-spacing: 2px; }
+    header p  { font-size: 1rem; margin-top: 6px; opacity: .88; }
+
+    /* ── Main layout ── */
+    main {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 24px 16px 60px;
+    }
+
+    /* ── Section card ── */
+    .card {
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px 20px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--orange);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── Ingredient inputs ── */
+    .ingredient-list { display: flex; flex-direction: column; gap: 10px; }
+    .ingredient-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ingredient-num {
+      width: 28px; height: 28px;
+      background: var(--orange-bg);
+      border: 1.5px solid var(--border);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .85rem;
+      font-weight: 700;
+      color: var(--orange);
+      flex-shrink: 0;
+    }
+    .ingredient-row input {
+      flex: 1;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-size: 1rem;
+      outline: none;
+      background: var(--orange-bg);
+      color: var(--text);
+    }
+    .ingredient-row input:focus { border-color: var(--orange); }
+    .ingredient-row input::placeholder { color: #c4a68a; }
+
+    /* ── Photo upload ── */
+    .upload-area {
+      border: 2.5px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 22px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      background: var(--orange-bg);
+      position: relative;
+    }
+    .upload-area:hover, .upload-area.drag-over {
+      border-color: var(--orange);
+      background: #fff3ea;
+    }
+    .upload-area input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%;
+    }
+    .upload-icon { font-size: 2.4rem; }
+    .upload-text { font-size: 1rem; color: var(--text-muted); margin-top: 6px; }
+    .upload-sub  { font-size: .82rem; color: #b89880; margin-top: 4px; }
+
+    /* Photo preview grid */
+    .photo-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .preview-item {
+      position: relative;
+      width: 90px; height: 90px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 2px solid var(--border);
+    }
+    .preview-item img {
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    .preview-remove {
+      position: absolute; top: 3px; right: 3px;
+      background: rgba(0,0,0,.55);
+      color: #fff;
+      border: none; border-radius: 50%;
+      width: 22px; height: 22px;
+      font-size: .8rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* ── Submit button ── */
+    .btn-submit {
+      width: 100%;
+      background: linear-gradient(135deg, var(--orange) 0%, #d4652a 100%);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      padding: 18px;
+      font-size: 1.25rem;
+      font-weight: 900;
+      letter-spacing: 2px;
+      cursor: pointer;
+      box-shadow: 0 4px 18px rgba(232,135,58,.35);
+      transition: opacity .2s, transform .1s;
+    }
+    .btn-submit:hover:not(:disabled) { opacity: .92; transform: translateY(-1px); }
+    .btn-submit:disabled { opacity: .55; cursor: not-allowed; }
+
+    /* ── Loading ── */
+    #loading {
+      display: none;
+      text-align: center;
+      padding: 32px 0;
+    }
+    .loader {
+      display: inline-block;
+      width: 52px; height: 52px;
+      border: 5px solid var(--border);
+      border-top-color: var(--orange);
+      border-radius: 50%;
+      animation: spin .9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading p { margin-top: 14px; color: var(--text-muted); font-size: 1rem; }
+
+    /* ── Error ── */
+    #error-msg {
+      display: none;
+      background: #fff0f0;
+      border: 1.5px solid #f5a0a0;
+      border-radius: 12px;
+      padding: 14px 18px;
+      color: #c03030;
+      font-size: .95rem;
+      margin-bottom: 20px;
+    }
+
+    /* ── Recipe cards ── */
+    #results { display: none; }
+    #results h2 {
+      font-size: 1.3rem;
+      font-weight: 900;
+      color: var(--orange);
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .recipe-card {
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 22px;
+      overflow: hidden;
+    }
+    .recipe-header {
+      background: linear-gradient(135deg, var(--green) 0%, #3d6642 100%);
+      color: #fff;
+      padding: 16px 20px;
+    }
+    .recipe-num {
+      font-size: .8rem;
+      opacity: .8;
+      letter-spacing: 1px;
+    }
+    .recipe-name {
+      font-size: 1.35rem;
+      font-weight: 900;
+      margin-top: 4px;
+    }
+    .recipe-meta {
+      display: flex;
+      gap: 16px;
+      margin-top: 8px;
+      font-size: .85rem;
+      opacity: .88;
+      flex-wrap: wrap;
+    }
+    .recipe-meta span { display: flex; align-items: center; gap: 4px; }
+
+    .recipe-body { padding: 18px 20px; }
+
+    .section-label {
+      font-size: .82rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--orange);
+      margin-bottom: 8px;
+      margin-top: 14px;
+    }
+    .section-label:first-child { margin-top: 0; }
+
+    /* Ingredient pills */
+    .ing-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .ing-pill {
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: .88rem;
+      font-weight: 600;
+    }
+    .ing-pill.have {
+      background: #e8f4e9;
+      color: var(--green);
+      border: 1.5px solid #b8debb;
+    }
+    .ing-pill.buy {
+      background: #fff3e0;
+      color: var(--orange);
+      border: 1.5px solid #ffd9b0;
+    }
+
+    /* Steps */
+    .steps-list { counter-reset: step; list-style: none; }
+    .steps-list li {
+      counter-increment: step;
+      display: flex;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: .97rem;
+      line-height: 1.55;
+    }
+    .steps-list li:last-child { border-bottom: none; }
+    .steps-list li::before {
+      content: counter(step);
+      min-width: 26px; height: 26px;
+      background: var(--orange);
+      color: #fff;
+      border-radius: 50%;
+      font-size: .82rem;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* Tip box */
+    .tip-box {
+      background: var(--orange-bg);
+      border-left: 4px solid var(--orange-light);
+      border-radius: 0 10px 10px 0;
+      padding: 10px 14px;
+      font-size: .88rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      font-size: .78rem;
+      color: #c4a68a;
+      padding: 20px;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      header h1 { font-size: 1.65rem; }
+      .recipe-name { font-size: 1.15rem; }
+      .btn-submit { font-size: 1.1rem; padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🍳 今天煮什麼？</h1>
+  <p>告訴我冰箱有什麼，我來幫你想菜單！</p>
+</header>
+
+<main>
+
+  <!-- Ingredients text -->
+  <div class="card">
+    <div class="card-title">🥦 手邊有哪些食材？（最多五樣）</div>
+    <div class="ingredient-list" id="ingredientList">
+      <div class="ingredient-row">
+        <div class="ingredient-num">1</div>
+        <input type="text" placeholder="例如：豬肉" maxlength="30" />
+      </div>
+      <div class="ingredient-row">
+        <div class="ingredient-num">2</div>
+        <input type="text" placeholder="例如：豆腐" maxlength="30" />
+      </div>
+      <div class="ingredient-row">
+        <div class="ingredient-num">3</div>
+        <input type="text" placeholder="例如：雞蛋（可留空）" maxlength="30" />
+      </div>
+      <div class="ingredient-row">
+        <div class="ingredient-num">4</div>
+        <input type="text" placeholder="例如：高麗菜（可留空）" maxlength="30" />
+      </div>
+      <div class="ingredient-row">
+        <div class="ingredient-num">5</div>
+        <input type="text" placeholder="例如：蒜頭（可留空）" maxlength="30" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Photo upload -->
+  <div class="card">
+    <div class="card-title">📷 或是拍一張食材照片</div>
+    <div class="upload-area" id="uploadArea">
+      <input type="file" id="photoInput" accept="image/*" multiple onchange="handlePhotos(this.files)" />
+      <div class="upload-icon">📸</div>
+      <div class="upload-text">點這裡拍照 / 上傳圖片</div>
+      <div class="upload-sub">支援 JPG、PNG；最多 5 張</div>
+    </div>
+    <div class="photo-preview" id="photoPreview"></div>
+  </div>
+
+  <!-- Error -->
+  <div id="error-msg"></div>
+
+  <!-- Submit -->
+  <button class="btn-submit" id="submitBtn" onclick="submit()">幫我想菜單 🍽️</button>
+
+  <!-- Loading -->
+  <div id="loading">
+    <div class="loader"></div>
+    <p>正在想菜單，請稍候…</p>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+    <h2>🍽️ 今日推薦食譜</h2>
+    <div id="recipeContainer"></div>
+  </div>
+
+</main>
+
+<footer>食材料理助手 · 專為宜蘭家庭設計</footer>
+
+<script>
+/* ─── Stored photos (base64) ─── */
+const storedPhotos = [];
+
+/* ─── Init ─── */
+window.addEventListener('DOMContentLoaded', () => {
+  const area = document.getElementById('uploadArea');
+  area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('drag-over'); });
+  area.addEventListener('dragleave', () => area.classList.remove('drag-over'));
+  area.addEventListener('drop', e => {
+    e.preventDefault();
+    area.classList.remove('drag-over');
+    handlePhotos(e.dataTransfer.files);
+  });
+});
+
+/* ─── Photo handling ─── */
+function handlePhotos(files) {
+  const remaining = 5 - storedPhotos.length;
+  const toAdd = Array.from(files).slice(0, remaining);
+  toAdd.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      const base64 = dataUrl.split(',')[1];
+      const mediaType = file.type || 'image/jpeg';
+      storedPhotos.push({ base64, mediaType });
+      renderPreviews();
+    };
+    reader.readAsDataURL(file);
+  });
+  if (files.length > remaining) showError('最多只能上傳 5 張照片。');
+}
+
+function renderPreviews() {
+  const container = document.getElementById('photoPreview');
+  container.innerHTML = '';
+  storedPhotos.forEach((p, i) => {
+    const div = document.createElement('div');
+    div.className = 'preview-item';
+    div.innerHTML = `
+      <img src="data:${p.mediaType};base64,${p.base64}" alt="食材照片" />
+      <button class="preview-remove" onclick="removePhoto(${i})">✕</button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function removePhoto(idx) {
+  storedPhotos.splice(idx, 1);
+  renderPreviews();
+  clearError();
+}
+
+/* ─── Helpers ─── */
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function clearError() {
+  document.getElementById('error-msg').style.display = 'none';
+}
+
+/* ─── Main submit ─── */
+async function submit() {
+  clearError();
+
+  const rows = document.querySelectorAll('#ingredientList input');
+  const textIngredients = Array.from(rows).map(r => r.value.trim()).filter(Boolean);
+
+  if (textIngredients.length === 0 && storedPhotos.length === 0) {
+    showError('請至少輸入一樣食材，或上傳一張照片！');
+    return;
+  }
+
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('recipeContainer').innerHTML = '';
+
+  try {
+    const res = await fetch('/api/recipes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ textIngredients, photos: storedPhotos })
+    });
+
+    const text = await res.text();
+    if (!res.ok) {
+      const err = JSON.parse(text);
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+
+    const recipes = JSON.parse(text);
+    renderRecipes(recipes);
+  } catch (err) {
+    showError('發生錯誤：' + (err.message || '請重試。'));
+  } finally {
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('loading').style.display = 'none';
+  }
+}
+
+/* ─── Render recipes ─── */
+function renderRecipes(recipes) {
+  if (!Array.isArray(recipes) || recipes.length === 0) {
+    showError('沒有收到有效的食譜，請再試一次。');
+    return;
+  }
+
+  const container = document.getElementById('recipeContainer');
+  container.innerHTML = '';
+
+  const diffColor = { '簡單': '#5a8a5e', '中等': '#d4862a', '需要技巧': '#c0392b' };
+
+  recipes.forEach((r, i) => {
+    const card = document.createElement('div');
+    card.className = 'recipe-card';
+
+    const haveHtml = (r.have || []).map(h => `<span class="ing-pill have">✔ ${esc(h)}</span>`).join('');
+    const buyHtml  = (r.buy  || []).map(b => `<span class="ing-pill buy">🛒 ${esc(b)}</span>`).join('');
+    const stepsHtml = (r.steps || []).map(s => `<li>${esc(s)}</li>`).join('');
+    const diff = r.difficulty || '簡單';
+    const diffStyle = `color:${diffColor[diff] || '#5a8a5e'}; font-weight:700;`;
+
+    card.innerHTML = `
+      <div class="recipe-header">
+        <div class="recipe-num">食譜 ${i + 1}</div>
+        <div class="recipe-name">${esc(r.name || '家常料理')}</div>
+        <div class="recipe-meta">
+          <span>⏱ ${esc(r.time || '')}</span>
+          <span>📊 <span style="${diffStyle}">${esc(diff)}</span></span>
+        </div>
+      </div>
+      <div class="recipe-body">
+        ${haveHtml || buyHtml ? `
+          <div class="section-label">食材</div>
+          <div class="ing-grid">${haveHtml}${buyHtml}</div>
+        ` : ''}
+        ${stepsHtml ? `
+          <div class="section-label">做法</div>
+          <ol class="steps-list">${stepsHtml}</ol>
+        ` : ''}
+        ${r.tip ? `<div class="tip-box">💡 ${esc(r.tip)}</div>` : ''}
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function esc(str) {
+  return String(str ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

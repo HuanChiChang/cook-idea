@@ -1,0 +1,15 @@
+{
+  "name": "cook-idea",
+  "version": "1.0.0",
+  "description": "台灣家庭料理推薦助手",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
